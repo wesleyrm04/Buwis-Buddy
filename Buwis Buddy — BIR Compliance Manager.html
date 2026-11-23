@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Buwis Buddy — BIR Compliance Manager</title>
+<style>
+:root{--bg:#f6faf7;--sf:#fff;--tx:#16261d;--mu:#5a6b61;--br:#1f8a4c;--bi:#fff;--ln:#dbe7df;--rd:#c62f2f;--am:#b7791f;--rb:#fdecec;--ab:#fff4dc;--gb:#e5f5ec;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1a13;--sf:#15261b;--tx:#e8f3ec;--mu:#9bb0a3;--br:#3fc77a;--bi:#08140d;--ln:#25392c;--rd:#ff8a8a;--am:#f4b942;--rb:#3a1b1b;--ab:#3a2f14;--gb:#16301f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1a13;--sf:#15261b;--tx:#e8f3ec;--mu:#9bb0a3;--br:#3fc77a;--bi:#08140d;--ln:#25392c;--rd:#ff8a8a;--am:#f4b942;--rb:#3a1b1b;--ab:#3a2f14;--gb:#16301f;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.w{max-width:820px;margin:0 auto;padding:0 16px 60px}
+header{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--ln);z-index:5}
+.bar{display:flex;gap:8px;align-items:center;padding:10px 0;flex-wrap:wrap}
+.logo{font-weight:800;margin-right:auto}
+select,input[type=text]{font:inherit;padding:8px 10px;border:1px solid var(--ln);border-radius:10px;background:var(--sf);color:var(--tx);max-width:100%}
+button{font:inherit;cursor:pointer;border:1px solid var(--ln);background:var(--sf);color:var(--tx);border-radius:10px;padding:8px 12px}
+button.p{background:var(--br);color:var(--bi);border-color:var(--br);font-weight:600}
+button.g{border:none;background:none;color:var(--mu);padding:4px 8px}
+.tabs{display:flex;gap:4px}.tabs button{border:none;background:none;color:var(--mu);border-bottom:3px solid transparent;border-radius:0;padding:8px 14px}
+.tabs button.on{color:var(--tx);border-color:var(--br);font-weight:700}
+.card{background:var(--sf);border:1px solid var(--ln);border-radius:16px;padding:16px;margin:12px 0}
+h2{margin:18px 0 4px;font-size:1.3rem}h3{margin:0 0 4px;font-size:1.05rem}.mu{color:var(--mu);font-size:.9rem}
+.alert{border-radius:12px;padding:10px 14px;margin:12px 0;background:var(--ab);border:1px solid var(--am)}
+.row{display:flex;gap:12px;align-items:center}.row .grow{flex:1;min-width:0}
+.pill{font-size:.75rem;font-weight:700;padding:2px 10px;border-radius:999px;white-space:nowrap}
+.ok{background:var(--gb);color:var(--br)}.warn{background:var(--ab);color:var(--am)}.bad{background:var(--rb);color:var(--rd)}.nm{background:var(--bg);color:var(--mu);border:1px solid var(--ln)}
+input[type=checkbox]{width:22px;height:22px;accent-color:var(--br)}
+.item.done h3{text-decoration:line-through;color:var(--mu)}
+label{display:block;margin:12px 0 4px;font-weight:600}
+details{background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:12px 16px;margin:10px 0}
+summary{cursor:pointer;font-weight:700}ol,ul{padding-left:20px}
+.foot{font-size:.8rem;color:var(--mu);text-align:center;margin-top:30px}
+.hide{display:none}
+.sheet{background:#fff;color:#000;border:1px solid #888;border-radius:6px;padding:20px;margin:14px 0}.sheet h3{text-align:center;font-size:1.05rem}.sheet .r{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #ddd;padding:5px 0;font-size:.92rem}.sheet .r b{text-align:right}.sheet .st{background:#e8e8e8;font-weight:700;padding:3px 8px;margin-top:12px;font-size:.85rem}.sheet .tot{font-size:1.1rem;font-weight:800;background:#eef7f0}.sheet .nt{font-size:.8rem;color:#444;margin-top:10px}.sheet .ms{color:#c62f2f}
+li.x{margin:4px 0}
+@media print{header,.noprint,.tabs{display:none}body{background:#fff;color:#000}}
+</style>
+</head>
+<body>
+<header><div class="w"><div class="bar">
+<span class="logo">🐊 Buwis Buddy</span>
+<select id="biz" aria-label="Business"></select>
+<button id="add">+ Business</button>
+<button id="theme" aria-label="Toggle theme">◐</button>
+</div>
+<div class="tabs" id="tabs"><button data-t="cal" class="on">Calendar</button><button data-t="guides">Guides</button><button data-t="forms">Forms</button><button data-t="finder">What to file</button><button data-t="learn">Learn</button></div>
+</div></header>
+<div class="w" id="app"></div>
+
+<script>
+var KEY="buwis-buddy-v1",S={biz:[],cur:null},tab="cal",form=null;
+try{var raw=localStorage.getItem(KEY);if(raw)S=JSON.parse(raw)}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function $(i){return document.getElementById(i)}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function cur(){return S.biz.filter(function(b){return b.id===S.cur})[0]||S.biz[0]}
+
+/* ---- deadlines ---- */
+var REG={e8:"8% flat tax",grad:"Graduated rates + 3% percentage tax",vat:"VAT-registered"};
+function roll(d){while(d.getDay()===0||d.getDay()===6)d.setDate(d.getDate()+1);return d}
+function iso(d){return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()}
+function gen(b){
+ var out=[],Y=new Date().getFullYear();
+ [Y,Y+1].forEach(function(y){
+  var add=function(f,l,m,day){var d=roll(new Date(y,m,day));out.push({k:f+iso(d),f:f,l:l,d:d})};
+  add("1701/1701A","Annual income tax return for "+(y-1),3,15);
+  add("1701Q","Quarterly income tax, Jan–Mar",4,15);
+  add("1701Q","Quarterly income tax, Apr–Jun",7,15);
+  add("1701Q","Quarterly income tax, Jul–Sep",10,15);
+  if(b.reg!=="e8"){
+   var f=b.reg==="vat"?"2550Q":"2551Q",n=b.reg==="vat"?"Quarterly VAT":"Quarterly percentage tax";
+   add(f,n+", Oct–Dec "+(y-1),0,25);add(f,n+", Jan–Mar",3,25);add(f,n+", Apr–Jun",6,25);add(f,n+", Jul–Sep",9,25);
+  }
+  if(b.emp)for(var m=0;m<12;m++)add("1601-C","Withholding on compensation for "+new Date(y,m-1,1).toLocaleString("en",{month:"long"}),m,10);
+ });
+ var t=today(),lo=t-60*864e5,hi=t+270*864e5;
+ return out.filter(function(x){return x.d>=lo&&x.d<=hi}).sort(function(a,b){return a.d-b.d});
+}
+function today(){var n=new Date();return new Date(n.getFullYear(),n.getMonth(),n.getDate()).getTime()}
+function diff(d){return Math.round((d.getTime()-today())/864e5)}
+function fmt(d){return d.toLocaleDateString("en-PH",{weekday:"short",month:"short",day:"numeric",year:"numeric"})}
+function status(x,b){
+ if(b.done[x.k])return["Done","ok"];var n=diff(x.d);
+ if(n<0)return["Overdue by "+(-n)+"d","bad"];if(n===0)return["Due today","bad"];
+ if(n<=3)return["In "+n+" day"+(n>1?"s":""),"bad"];if(n<=7)return["In "+n+" days","warn"];return["In "+n+" days","nm"];
+}
+
+/* ---- content ---- */
+var GUIDES=[
+{f:"1701Q",t:"Quarterly income tax (self-employed)",w:"Self-employed individuals and professionals, including mixed-income earners.",s:["Pick your Quarter: Q1 (Jan–Mar), Q2 (Apr–Jun) or Q3 (Jul–Sep). There is no separate Q4; the annual return covers it.","Add up gross receipts for the quarter and everything you reported in earlier quarters this year (the form is cumulative).","On the 8% option: take cumulative gross receipts, subtract ₱250,000 if you are purely self-employed, then multiply by 8%.","On graduated rates: subtract allowable expenses (or the 40% optional standard deduction), apply the tax table, then subtract tax already paid.","Deduct tax credits such as creditable withholding tax certificates (BIR Form 2307) you received from clients.","File and pay via eBIRForms or eFPS, or through an authorized bank, by the due date."],tip:"Keep every 2307 from clients. They reduce your tax bill."},
+{f:"1701/1701A",t:"Annual income tax return",w:"All self-employed individuals; 1701A is for those using the 8% option or the optional standard deduction.",s:["Gather all four quarters of figures and your 2307 certificates.","Choose the right form: 1701A for 8% or OSD, 1701 for itemized deductions.","Recompute the full-year tax and subtract what you paid through the 1701Qs.","Pay any balance, or choose to carry over an excess credit.","Attach required documents, such as certificates and, when required, financial statements."],tip:"The annual return is due April 15 of the following year."},
+{f:"2551Q",t:"Quarterly percentage tax",w:"Non-VAT businesses on graduated rates. Not filed if you elected the 8% option.",s:["Total your gross sales or receipts for the quarter.","Multiply by the current percentage-tax rate (3% for most businesses since July 2023; confirm on the BIR site).","Deduct any percentage-tax credits if applicable.","File and pay within 25 days after the quarter ends."],tip:"Choosing 8% replaces both the graduated income tax and this tax."},
+{f:"2550Q",t:"Quarterly VAT return",w:"VAT-registered businesses.",s:["List output VAT charged on your sales.","List input VAT from valid VAT invoices of your purchases.","Subtract input from output and carry over excess input if any.","File and pay within 25 days after the quarter ends."],tip:"Keep proper invoices; input VAT is only claimable with valid ones."},
+{f:"1601-C",t:"Withholding tax on employees",w:"Businesses with employees.",s:["Compute withholding on each employee’s compensation using the BIR table.","Total the tax withheld for the month.","File the return and remit the amount by the monthly due date.","Issue each employee a BIR Form 2316 at year end."],tip:"Filing groups under eFPS may have different dates, so confirm yours."}];
+var LEARN=[
+["8% or graduated: which should I choose?","The 8% option is a flat tax on gross receipts above ₱250,000 (for purely self-employed people) and replaces both income tax and percentage tax. It suits low-expense service work. Graduated rates let you deduct expenses, so they can win when your costs are high. The option is only for non-VAT earners with gross receipts of ₱3 million or less, and it is set for the whole year. Ask an accountant before switching."],
+["What if a deadline falls on a weekend?","The due date usually moves to the next working day. This app shifts weekend dates for you, but it cannot know about special holidays or extensions, so check the BIR calendar for those."],
+["What happens if I file late?","Late filing or payment generally brings a surcharge, interest, and compromise penalties. The amounts depend on the return and how late you are, so file even if you cannot pay in full and ask the BIR or an accountant about options."],
+["Records you should keep","Registered books of accounts, official receipts or invoices for every sale, and certificates of tax withheld (2307). Keep them for the period the BIR requires, commonly ten years."],
+["Mixed-income earners","If you have a job and a side business, your employer handles tax on your salary. Your business income is filed separately on the 1701Q, and the ₱250,000 reduction under the 8% option does not apply to you."]];
+
+/* ---- render ---- */
+function render(){
+ var b=cur(),sel=$("biz");
+ sel.innerHTML=S.biz.map(function(x){return'<option value="'+x.id+'"'+(b&&x.id===b.id?" selected":"")+">"+esc(x.name)+"</option>"}).join("");
+ sel.classList.toggle("hide",!b);
+ [].forEach.call($("tabs").children,function(el){el.classList.toggle("on",el.dataset.t===tab)});
+ $("tabs").classList.toggle("hide",!b||form);
+ var h="";
+ if(!b||form){h=wizard()}
+ else if(tab==="cal")h=calendar(b);
+ else if(tab==="guides")h="<h2>Filing guides</h2><p class='mu'>Plain-language steps for common BIR forms.</p>"+GUIDES.map(function(g){return"<details><summary>"+g.f+" · "+g.t+"</summary><p class='mu'>"+g.w+"</p><ol>"+g.s.map(function(s){return"<li>"+s+"</li>"}).join("")+"</ol><p><b>Tip:</b> "+g.tip+"</p></details>"}).join("")+"<div class='noprint'><button onclick='doPrint()'>Export guides to PDF</button></div>";
+ else if(tab==="forms")h=formsTab(b);
+ else if(tab==="finder")h=finder(b);
+ else h="<h2>Knowledge hub</h2><p class='mu'>The “why” behind the rules.</p>"+LEARN.map(function(a){return"<details><summary>"+a[0]+"</summary><p>"+a[1]+"</p></details>"}).join("");
+ $("app").innerHTML=h+"<p class='foot'>For education and guidance only. Always confirm your situation with the BIR or a licensed accountant. Data is saved on this device only.</p>";
+ if(b&&!form){if(tab==="forms")prev();if(tab==="finder")fres()}
+}
+function calendar(b){
+ var items=gen(b),h="",soon=[];
+ S.biz.forEach(function(x){gen(x).forEach(function(i){if(!x.done[i.k]&&diff(i.d)<=7)soon.push(x.name+": "+i.f+" ("+(diff(i.d)<0?"overdue":diff(i.d)===0?"today":"in "+diff(i.d)+"d")+")")})});
+ if(soon.length)h+="<div class='alert'><b>⏰ Reminders</b><br>"+soon.map(esc).join("<br>")+"</div>";
+ h+="<div class='row'><div class='grow'><h2>"+esc(b.name)+"</h2><div class='mu'>"+(b.mixed?"Mixed income":"Purely self-employed")+" · "+REG[b.reg]+(b.emp?" · Has employees":"")+"</div></div><button class='g noprint' data-a='edit'>Edit</button><button class='g noprint' data-a='del'>Delete</button></div>";
+ h+="<div class='noprint' style='margin:10px 0'><button onclick='doPrint()'>Export calendar to PDF</button></div>";
+ h+=items.map(function(x){var s=status(x,b);return"<div class='card item"+(b.done[x.k]?" done":"")+"'><div class='row'><input type='checkbox' data-k='"+x.k+"'"+(b.done[x.k]?" checked":"")+" aria-label='Mark done'><div class='grow'><h3>"+x.f+" · "+x.l+"</h3><div class='mu'>"+fmt(x.d)+"</div></div><span class='pill "+s[1]+"'>"+s[0]+"</span></div></div>"}).join("");
+ return h+"<p class='mu'>Dates move to the next working day when they fall on a weekend. Check the BIR calendar for holidays and special extensions.</p>";
+}
+function wizard(){
+ var b=form&&form.id?form:{name:"",mixed:false,reg:"e8",emp:false};
+ var first=!S.biz.length;
+ if(!first&&!form)return"";
+ return"<h2>"+(first?"Welcome! Let’s set up your first business":(form.id?"Edit business":"Add a business"))+"</h2><p class='mu'>Four quick questions. No account needed.</p><div class='card'>"+
+ "<label>1. Business or brand name</label><input type='text' id='f_name' value='"+esc(b.name)+"' style='width:100%'>"+
+ "<label>2. What kind of income is this?</label><select id='f_mixed'><option value='0'"+(b.mixed?"":" selected")+">Purely self-employed or professional</option><option value='1'"+(b.mixed?" selected":"")+">Mixed income (I also have a job)</option></select>"+
+ "<label>3. Which tax option do you use?</label><select id='f_reg'>"+Object.keys(REG).map(function(k){return"<option value='"+k+"'"+(b.reg===k?" selected":"")+">"+REG[k]+"</option>"}).join("")+"</select>"+
+ "<label>4. Do you have employees?</label><select id='f_emp'><option value='0'"+(b.emp?"":" selected")+">No</option><option value='1'"+(b.emp?" selected":"")+">Yes</option></select>"+
+ "<div style='margin-top:18px' class='row'><button class='p' data-a='save'>Save and build my calendar</button>"+(first?"":"<button data-a='cancel'>Cancel</button>")+"</div></div>";
+}
+function doPrint(){try{window.print()}catch(e){alert("Printing is not available here. Open the page in a full browser tab and try again.")}}
+
+/* ---- forms ---- */
+var G={f:"1701Q",q:"1",y:String(new Date().getFullYear()),gross:"",m:"osd",exp:"",prev:"",cred:"",vs:"",iv:""},FD={gross:"",bmbe:"0"};
+var PF=[["tin","TIN (000-000-000-000)"],["rdo","RDO code"],["name","Registered name (Last, First, Middle)"],["trade","Trade name"],["addr","Registered address"],["zip","ZIP code"],["tel","Mobile number"],["email","Email"],["line","Line of business"]];
+var FQ={"1701Q":["1","2","3"],"1701A":["Annual"],"2551Q":["1","2","3","4"],"2550Q":["1","2","3","4"]};
+function N(x){return parseFloat(x)||0}
+function P(n){return"₱"+n.toLocaleString("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2})}
+function grad(t){return t<=250000?0:t<=400000?(t-250000)*.15:t<=800000?22500+(t-400000)*.2:t<=2e6?102500+(t-800000)*.25:t<=8e6?402500+(t-2e6)*.3:2202500+(t-8e6)*.35}
+function ni(k,l,v){return"<label>"+l+"</label><input type='number' inputmode='decimal' data-g='"+k+"' value='"+esc(v)+"' style='width:100%'>"}
+function formsTab(b){
+ var p=b.p||{},f=G.f,h="<h2>Generate a pre-filled document</h2><p class='mu'>Your taxpayer profile fills in automatically. Enter the amounts to get a worksheet laid out for encoding into eBIRForms.</p>";
+ h+="<details class='noprint'"+(p.tin?"":" open")+"><summary>Taxpayer profile for "+esc(b.name)+"</summary>"+PF.map(function(x){return"<label>"+x[1]+"</label><input type='text' data-p='"+x[0]+"' value='"+esc(p[x[0]]||"")+"' style='width:100%'>"}).join("")+"</details>";
+ h+="<div class='card noprint'><label>Form</label><select data-g='f'>"+Object.keys(FQ).map(function(k){return"<option"+(f===k?" selected":"")+">"+k+"</option>"}).join("")+"</select>";
+ if(f!=="1701A")h+="<label>Quarter</label><select data-g='q'>"+FQ[f].map(function(k){return"<option value='"+k+"'"+(G.q===k?" selected":"")+">Quarter "+k+"</option>"}).join("")+"</select>";
+ h+=ni("y","Tax year",G.y);
+ if(f==="1701Q"||f==="1701A"){
+  h+=ni("gross",f==="1701A"?"Gross receipts for the whole year (₱)":"Gross receipts, cumulative from Jan 1 to quarter end (₱)",G.gross);
+  if(b.reg!=="e8"){h+="<label>Deduction method</label><select data-g='m'><option value='osd'"+(G.m==="osd"?" selected":"")+">40% optional standard deduction</option><option value='itm'"+(G.m==="itm"?" selected":"")+">Itemized expenses</option></select>";if(G.m==="itm")h+=ni("exp","Allowable expenses, cumulative (₱)",G.exp)}
+  h+=ni("prev",f==="1701A"?"Tax paid in your quarterly returns (₱)":"Tax paid in previous quarters (₱)",G.prev)+ni("cred","Creditable withholding tax from 2307s, cumulative (₱)",G.cred);
+ }else if(f==="2551Q")h+=ni("gross","Gross receipts for the quarter (₱)",G.gross)+ni("cred","Less: tax credits or payments (₱)",G.cred);
+ else h+=ni("vs","Vatable sales for the quarter, excluding VAT (₱)",G.vs)+ni("iv","Input VAT from valid invoices (₱)",G.iv)+ni("cred","Less: other credits (₱)",G.cred);
+ h+="<div style='margin-top:14px'><button class='p' onclick='doPrint()'>Print or save as PDF</button></div></div><div id='prev'></div>";
+ return h;
+}
+function calc(b){
+ var f=G.f,y=N(G.y)||new Date().getFullYear(),q=G.q,r=[],nt=[],due=0,title,dd,g=N(G.gross),cr=N(G.cred),tax;
+ if(f==="1701Q"||f==="1701A"){
+  var an=f==="1701A",itm=b.reg!=="e8"&&G.m==="itm";
+  title=an?(itm?"BIR Form 1701 — Annual Income Tax Return (Individuals)":"BIR Form 1701A — Annual Income Tax Return (Individuals)"):"BIR Form 1701Q — Quarterly Income Tax Return (Individuals)";
+  r.push(["Gross receipts"+(an?" (full year)":" (cumulative)"),P(g)]);
+  if(b.reg==="e8"){var ded=b.mixed?0:25e4,base=Math.max(g-ded,0);tax=base*.08;r.push(["Less: ₱250,000 reduction"+(b.mixed?" (not allowed for mixed income)":""),P(Math.min(ded,g))]);r.push(["Taxable base",P(base)]);r.push(["Tax rate","8%"])}
+  else{var d2=itm?N(G.exp):g*.4,n=Math.max(g-d2,0);tax=grad(n);r.push([itm?"Less: itemized expenses":"Less: 40% optional standard deduction",P(d2)]);r.push(["Net taxable income",P(n)]);r.push(["Tax per graduated table",P(tax)]);if(b.mixed)nt.push("Mixed income: your salary also counts toward the graduated table. This figure may differ from the final annual tax, so confirm with an accountant.");if(itm)nt.push("Itemized deductions require books of accounts and the full BIR Form 1701 with financial statements.")}
+  r.push(["Income tax due",P(tax),1]);r.push(["Less: tax paid in "+(an?"quarterly returns":"previous quarters"),P(N(G.prev))]);r.push(["Less: creditable withholding tax (2307)",P(cr)]);
+  due=tax-N(G.prev)-cr;dd=an?roll(new Date(y+1,3,15)):roll(new Date(y,[4,7,10][N(q)-1],15));
+ }else{
+  var m=[3,6,9,0][N(q)-1],yy=q==="4"?y+1:y;dd=roll(new Date(yy,m,25));
+  if(f==="2551Q"){title="BIR Form 2551Q — Quarterly Percentage Tax Return";tax=g*.03;r.push(["Gross receipts for the quarter",P(g)]);r.push(["Percentage tax rate","3%"]);r.push(["Percentage tax due",P(tax),1]);r.push(["Less: tax credits or payments",P(cr)]);due=tax-cr;if(b.reg==="e8")nt.push("You elected the 8% option, which replaces the percentage tax. You normally do not file 2551Q.");if(b.reg==="vat")nt.push("VAT-registered businesses file 2550Q instead of 2551Q.")}
+  else{title="BIR Form 2550Q — Quarterly Value-Added Tax Return";var ov=N(G.vs)*.12,iv=N(G.iv);r.push(["Vatable sales (net of VAT)",P(N(G.vs))]);r.push(["Output VAT (12%)",P(ov)]);r.push(["Less: input VAT",P(iv)]);r.push(["Less: other credits",P(cr)]);due=ov-iv-cr;if(b.reg!=="vat")nt.push("This business is not set as VAT-registered. Only file 2550Q if you are registered for VAT.")}
+ }
+ r.push(["AMOUNT PAYABLE",P(Math.max(due,0)),2]);if(due<0)r.push(["Excess credit (carry over or refund)",P(-due),1]);
+ return{title:title,rows:r,nt:nt,dd:dd};
+}
+function prev(){
+ var el=$("prev"),b=cur();if(!el||!b)return;
+ var c=calc(b),p=b.p||{},f=G.f,miss=PF.filter(function(x){return!p[x[0]]}).length;
+ function v(k){return p[k]?esc(p[k]):"<span class='ms'>— add in profile —</span>"}
+ function R(a,z,cl){return"<div class='r "+(cl||"")+"'><span>"+a+"</span><b>"+z+"</b></div>"}
+ var per=f==="1701A"?"Calendar year "+G.y:"Quarter "+G.q+", "+G.y;
+ var h="<div class='sheet'><h3>"+c.title+"</h3><div class='nt' style='text-align:center'>Pre-filled worksheet by Buwis Buddy. This is not an official BIR form: encode these values into eBIRForms or eFPS and file and pay through BIR-authorized channels.</div>";
+ h+="<div class='st'>Taxpayer information</div>"+R("TIN",v("tin"))+R("RDO code",v("rdo"))+R("Registered name",v("name"))+R("Trade name",v("trade"))+R("Address",v("addr")+" "+(p.zip?esc(p.zip):""))+R("Contact",v("tel")+" · "+v("email"))+R("Line of business",v("line"))+R("Tax option",REG[b.reg]+(b.mixed?" · mixed income":""))+R("Filing period",per)+R("Due date",fmt(c.dd));
+ h+="<div class='st'>Computation</div>"+c.rows.map(function(x){return R(x[0],x[1],x[2]===2?"tot":"")}).join("");
+ h+="<div class='st'>Attach or keep ready</div><ul class='nt'><li>Form 2307 certificates from clients</li><li>Proof of previous quarterly payments</li><li>Sales summary and official receipts or invoices for the period</li><li>Payment confirmation from eBIRForms or your bank</li></ul>";
+ if(c.nt.length)h+="<div class='nt'><b>Notes:</b> "+c.nt.join(" ")+"</div>";
+ if(miss)h+="<div class='nt ms'>"+miss+" profile field(s) still empty.</div>";
+ h+="<div class='nt' style='margin-top:26px'>Signature over printed name: ____________________________ Date: ____________</div></div>";
+ el.innerHTML=h;
+}
+function finder(b){
+ return"<h2>What do I need to file?</h2><p class='mu'>Based on your business settings (<b>"+esc(b.name)+"</b>: "+(b.mixed?"mixed income":"purely self-employed")+", "+REG[b.reg]+(b.emp?", has employees":"")+"). Use Edit on the Calendar tab to change them.</p>"+
+ "<div class='card'><label>Expected gross receipts for the year (₱)</label><input type='number' inputmode='decimal' data-fd='gross' value='"+esc(FD.gross)+"' style='width:100%'><label>Registered as a BMBE (micro business) with your LGU?</label><select data-fd='bmbe'><option value='0'"+(FD.bmbe==="0"?" selected":"")+">No</option><option value='1'"+(FD.bmbe==="1"?" selected":"")+">Yes</option></select></div><div id='fres'></div>"+
+ "<details><summary>When can my tax be ₱0?</summary><ul><li class='x'><b>8% option:</b> if you are purely self-employed, the first ₱250,000 of yearly receipts is not taxed, and no percentage tax applies.</li><li class='x'><b>Graduated rates:</b> the first ₱250,000 of taxable income is taxed at 0%. Percentage tax (3%) is based on receipts, so it can still apply.</li><li class='x'><b>BMBE:</b> micro enterprises registered with their LGU (assets up to ₱3 million, excluding land) are exempt from income tax on business income.</li><li class='x'><b>No sales this period?</b> You usually still file a zero return on time.</li></ul></details>";
+}
+function fres(){
+ var el=$("fres"),b=cur();if(!el||!b)return;
+ var g=N(FD.gross),F=[],L=[],h="";
+ if(g>3e6){L.push("Over ₱3 million: VAT registration is required and the 8% option is not available.");F.push("2550Q, four times a year (VAT)","1701Q (3 times) and annual 1701")}
+ else if(b.reg==="e8"){F.push("1701Q: May 15, Aug 15, Nov 15","1701A annual: April 15");L.push("8% option: no 2551Q percentage tax.");if(g&&g<=25e4&&!b.mixed)L.push("Your receipts are within the ₱250,000 reduction, so income tax is ₱0. You still file.")}
+ else if(b.reg==="grad")F.push("1701Q: May 15, Aug 15, Nov 15","2551Q: within 25 days after each quarter","Annual 1701 or 1701A: April 15");
+ else F.push("2550Q: within 25 days after each quarter","1701Q: May 15, Aug 15, Nov 15","Annual 1701: April 15");
+ if(b.emp){F.push("1601-C monthly (withholding on compensation)","1604-C annual alphalist (January 31) and Form 2316 for each employee");L.push("Minimum-wage earners are exempt from income tax, but you still file withholding returns.")}
+ if(g&&g<=3e6&&!b.mixed){var a=Math.max(g-25e4,0)*.08,c=grad(g*.6)+g*.03;L.push("Estimate at "+P(g)+": 8% option ≈ <b>"+P(a)+"</b> versus graduated (40% deduction) plus 3% percentage tax ≈ <b>"+P(c)+"</b>. Itemized expenses could change the second figure.")}
+ if(FD.bmbe==="1")L.push("BMBE: business income is exempt from income tax. Keep your BMBE certificate and confirm with the BIR which returns you still file.");
+ L.push("Keep registered books and official receipts or invoices. The annual registration fee was abolished in 2024 (please confirm with the BIR).");
+ h="<div class='card'><h3>Forms to file</h3><ul>"+F.map(function(x){return"<li class='x'>"+x+"</li>"}).join("")+"</ul></div><div class='card'><h3>Good to know</h3><ul>"+L.map(function(x){return"<li class='x'>"+x+"</li>"}).join("")+"</ul></div><p class='mu'>Estimates only. Confirm with the BIR or a licensed accountant.</p>";
+ el.innerHTML=h;
+}
+function onIn(e){
+ var t=e.target,b=cur(),d=t.dataset;if(!b)return;
+ if(d.p!==undefined){b.p=b.p||{};b.p[d.p]=t.value;save();prev()}
+ else if(d.g!==undefined){G[d.g]=t.value;if(d.g==="f"){if(FQ[G.f].indexOf(G.q)<0)G.q=FQ[G.f][0];render()}else if(d.g==="m"){render()}else prev()}
+ else if(d.fd!==undefined){FD[d.fd]=t.value;fres()}
+}
+/* ---- events ---- */
+$("app").addEventListener("click",function(e){
+ var a=e.target.dataset.a,b=cur();
+ if(a==="save"){
+  var n=$("f_name").value.trim();if(!n){$("f_name").focus();return}
+  var v={name:n,mixed:$("f_mixed").value==="1",reg:$("f_reg").value,emp:$("f_emp").value==="1"};
+  if(form&&form.id){Object.assign(cur(),v)}else{var id="b"+Date.now();S.biz.push(Object.assign({id:id,done:{}},v));S.cur=id}
+  form=null;save();render();
+ }else if(a==="cancel"){form=null;render()}
+ else if(a==="edit"){form=b;render()}
+ else if(a==="del"&&confirm("Delete "+b.name+" and its checklist?")){S.biz=S.biz.filter(function(x){return x.id!==b.id});S.cur=S.biz[0]?S.biz[0].id:null;save();render()}
+});
+$("app").addEventListener("change",function(e){var k=e.target.dataset.k;if(k){var b=cur();if(e.target.checked)b.done[k]=1;else delete b.done[k];save();render()}});
+$("biz").addEventListener("change",function(){S.cur=this.value;save();render()});
+$("add").addEventListener("click",function(){if(S.biz.length>=5){alert("You can track up to 5 businesses.");return}form={};render()});
+$("app").addEventListener("input",onIn);
+$("tabs").addEventListener("click",function(e){if(e.target.dataset.t){tab=e.target.dataset.t;render()}});
+$("theme").addEventListener("click",function(){var r=document.documentElement,d=r.getAttribute("data-theme");var dark=d?d==="dark":matchMedia("(prefers-color-scheme: dark)").matches;r.setAttribute("data-theme",dark?"light":"dark")});
+render();
+</script>
+</body>
+</html>
